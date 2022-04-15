@@ -4,9 +4,11 @@ const ejs = require("ejs");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const Student = require("./models/student");
+const methodOverride = require("method-override");
 
 app.use(express.static("public"));
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(methodOverride("_method"));
 app.set("view engine", ejs);
 
 mongoose
@@ -71,6 +73,38 @@ app.get("/students/:id", async (req, res) => {
   } catch (e) {
     res.send("Couldn't find");
     console.log(e);
+  }
+});
+
+app.get("/students/edit/:id", async (req, res) => {
+  let { id } = req.params;
+  try {
+    let data = await Student.findOne({ id });
+    if (data != null) {
+      res.render("edit.ejs", { data });
+    } else {
+      res.send("Couldn't find'");
+    }
+  } catch {
+    res.send("error");
+  }
+});
+
+//use method - oveerwrite
+app.put("/students/edit/:id", async (req, res) => {
+  let { id, name, age, merit, other } = req.body;
+  try {
+    let d = await Student.findOneAndUpdate(
+      { id },
+      { id, name, age, scholarship: { merit, other } },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+    res.redirect(`/students/${id}`);
+  } catch {
+    res.render("reject.ejs");
   }
 });
 
