@@ -26,10 +26,6 @@ app.get("/", (req, res) => {
   res.send("This is a homepage");
 });
 
-app.get("/students", (req, res) => {
-  res.send("This is students page");
-});
-
 app.get("/students/insert", (req, res) => {
   res.render("studentInsert.ejs");
 });
@@ -53,6 +49,34 @@ app.post("/students/insert", (req, res) => {
       console.log(e);
       res.render("reject.ejs");
     });
+});
+
+app.get("/students", async (req, res) => {
+  try {
+    let data = await Student.find();
+    res.render("students.ejs", { data });
+  } catch {
+    res.send("Couldn't find");
+  }
+});
+app.get("/students/:id", async (req, res) => {
+  let { id } = req.params;
+  try {
+    let data = await Student.findOne({ id });
+    if (data != null) {
+      res.render("studentpage.ejs", { data });
+    } else {
+      res.send("Couldn't find ,try again");
+    }
+  } catch (e) {
+    res.send("Couldn't find");
+    console.log(e);
+  }
+});
+
+app.get("/*", (req, res) => {
+  res.status(404);
+  res.send("Not allowed");
 });
 
 app.listen(3000, () => {
