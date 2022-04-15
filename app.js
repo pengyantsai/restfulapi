@@ -10,6 +10,7 @@ app.use(express.static("public"));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(methodOverride("_method"));
 app.set("view engine", ejs);
+//mongoose.set("useFindAndModify", false);
 
 mongoose
   .connect("mongodb://localhost:27017/studentDB", {
@@ -108,11 +109,24 @@ app.put("/students/edit/:id", async (req, res) => {
   }
 });
 
+app.delete("/students/delete/:id", (req, res) => {
+  let { id } = req.params;
+  Student.deleteOne({ id })
+    .then((meg) => {
+      console.log(meg);
+      res.send("Deleted successfully.");
+    })
+    .catch((e) => {
+      console.log(e);
+      res.send("Delete failed.");
+    });
+});
+/*
 app.get("/*", (req, res) => {
   res.status(404);
   res.send("Not allowed");
 });
-
+*/
 app.listen(3000, () => {
   console.log("Server is running on port 3000");
 });
