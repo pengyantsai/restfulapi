@@ -1,6 +1,5 @@
 const express = require("express");
 const app = express();
-const ejs = require("ejs");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const Student = require("./models/student");
@@ -9,7 +8,6 @@ const methodOverride = require("method-override");
 app.use(express.static("public"));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(methodOverride("_method"));
-app.set("view engine", ejs);
 //mongoose.set("useFindAndModify", false);
 
 mongoose
@@ -25,15 +23,16 @@ mongoose
     console.log(err);
   });
 
-app.get("/", (req, res) => {
-  res.send("This is a homepage");
+app.get("/students", async (req, res) => {
+  try {
+    let data = await Student.find();
+    res.send(data);
+  } catch {
+    res.send({ message: "Student not found." });
+  }
 });
 
-app.get("/students/insert", (req, res) => {
-  res.render("studentInsert.ejs");
-});
-
-app.post("/students/insert", (req, res) => {
+app.post("/students", (req, res) => {
   let { id, name, age, merit, other } = req.body;
   let newStudent = new Student({
     id,
@@ -44,55 +43,30 @@ app.post("/students/insert", (req, res) => {
   newStudent
     .save()
     .then(() => {
-      console.log("Student accepted.");
-      res.render("accept.ejs");
+      res.send({ message: "Student saved" });
     })
     .catch((e) => {
-      console.log("Student not accepted.");
-      console.log(e);
-      res.render("reject.ejs");
+      res.status(404).send(e);
     });
 });
 
-app.get("/students", async (req, res) => {
-  try {
-    let data = await Student.find();
-    res.render("students.ejs", { data });
-  } catch {
-    res.send("Couldn't find");
-  }
-});
 app.get("/students/:id", async (req, res) => {
   let { id } = req.params;
   try {
     let data = await Student.findOne({ id });
     if (data != null) {
-      res.render("studentpage.ejs", { data });
+      res.send(data);
     } else {
-      res.send("Couldn't find ,try again");
+      res.status(404).send({ message: "Student not found" });
     }
   } catch (e) {
-    res.send("Couldn't find");
+    res.send({ message: "Couldn't find" });
     console.log(e);
   }
 });
 
-app.get("/students/edit/:id", async (req, res) => {
-  let { id } = req.params;
-  try {
-    let data = await Student.findOne({ id });
-    if (data != null) {
-      res.render("edit.ejs", { data });
-    } else {
-      res.send("Couldn't find'");
-    }
-  } catch {
-    res.send("error");
-  }
-});
-
-//use method - oveerwrite
-app.put("/students/edit/:id", async (req, res) => {
+//要給全部數值才能改 put
+app.put("/students/:id", async (req, res) => {
   let { id, name, age, merit, other } = req.body;
   try {
     let d = await Student.findOneAndUpdate(
@@ -101,11 +75,43 @@ app.put("/students/edit/:id", async (req, res) => {
       {
         new: true,
         runValidators: true,
+        overwrite: true,
       }
     );
-    res.redirect(`/students/${id}`);
-  } catch {
-    res.render("reject.ejs");
+    res.send({ message: "successfully updated student" });
+  } catch (e) {
+    res.status(404).send({ message: "failure" });
+    res.send(e);
+  }
+});
+
+//可改單一 patch
+class newData {
+  constructor() {}
+  setProperties(key, value) {
+    if (key !== "merit" && key !== "other") {
+      this[key] = value;
+    } else {
+      this[`scholarship.${key}`] = value;
+    }
+  }
+}
+
+app.patch("/students/:id", async (req, res) => {
+  let { id } = req.params;
+  let newObject = new newData();
+  for (let prop in req.body) {
+    newObject.setProperties(prop, req.body[prop]);
+  }
+  try {
+    let d = await Student.findOneAndUpdate({ id }, newObject, {
+      new: true,
+      runValidators: true,
+    });
+    res.send({ message: "successfully updated student" });
+  } catch (e) {
+    res.status(404).send({ message: "failure" });
+    res.send(e);
   }
 });
 
@@ -121,12 +127,25 @@ app.delete("/students/delete/:id", (req, res) => {
       res.send("Delete failed.");
     });
 });
-/*
+
+app.delete("/students/delete", (req, res) => {
+  let { id } = req.params;
+  Student.deleteMany({})
+    .then((meg) => {
+      console.log(meg);
+      res.send("Deleted successfully.");
+    })
+    .catch((e) => {
+      console.log(e);
+      res.send("Delete failed.");
+    });
+});
+
 app.get("/*", (req, res) => {
   res.status(404);
   res.send("Not allowed");
 });
-*/
+
 app.listen(3000, () => {
   console.log("Server is running on port 3000");
 });
